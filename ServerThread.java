@@ -54,15 +54,25 @@ public class ServerThread extends Thread {
             if(clientNames.isEmpty()){
                 nomeGruppo = nomeMittente + "'s group";
             }
+            else{
+                nomeGruppo = clientNames.get(0);
+            }
 
             // Controlla se il client è già registrato
-            if (clientNames.contains(nomeMittente)) {
-                String strServer = nomeMittente + " is back in "+nomeGruppo+"!";
-                System.out.println(strServer);
-                out.writeUTF(strServer);
+            if (clientNumbers.contains(numeroMittente)) {
+                if (!clientNames.contains(nomeMittente) && clientNumbers.contains(numeroMittente)) {
+                    String strServer = numeroMittente + " is back in " + nomeGruppo + " with a new name, welcome back " +nomeMittente+"!";
+                    System.out.println(strServer);
+                    out.writeUTF(strServer);
+                }
+                else{
+                    String strServer = nomeMittente + " is back in " + nomeGruppo + "!";
+                    System.out.println(strServer);
+                    out.writeUTF(strServer);
+                }
 
                 // Invia i messaggi precedenti a questo client
-                String firstAccessTime = firstAccessTimestamps.get(nomeMittente);
+                String firstAccessTime = firstAccessTimestamps.get(numeroMittente);
                 for (String msg : messages) {
                     String[] parts = msg.split(" - ", 2); // Assumendo formato: "timestamp - messaggio"
                     if (parts.length == 2 && parts[0].compareTo(firstAccessTime) > 0) {
@@ -72,10 +82,10 @@ public class ServerThread extends Thread {
             } else {
                 // Registra il primo accesso con data e ora
                 String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-                firstAccessTimestamps.put(nomeMittente, timestamp);
+                firstAccessTimestamps.put(numeroMittente, timestamp);
 
                 // Messaggio di benvenuto
-                out.writeUTF("Welcome " + numeroMittente + " " + nomeMittente + "! First access in "+nomeGruppo+" registered at: " + timestamp);
+                out.writeUTF("Welcome " + numeroMittente + "-> "+ nomeMittente + " in " + nomeGruppo + "'s group! First access in "+nomeGruppo+" registered at: " + timestamp);
                 System.out.println(nomeMittente + " joined the chat at " + timestamp);
 
                 // Aggiungi numero e nome ai rispettivi array
