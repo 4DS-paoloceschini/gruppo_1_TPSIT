@@ -1,5 +1,6 @@
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -22,6 +23,7 @@ public class ServerThread extends Thread {
     public ServerThread(Socket c) {
         client = c;
     }
+
     @Override
     public void run() {
         try {
@@ -40,7 +42,6 @@ public class ServerThread extends Thread {
 
     public void comunica() {
         try {
-
             // Leggi il numero del client
             String numeroMittente = in.readUTF();
             System.out.println("Received number: " + numeroMittente); // Log del numero ricevuto
@@ -49,84 +50,68 @@ public class ServerThread extends Thread {
             String nomeMittente = in.readUTF();
             System.out.println("Received name: " + nomeMittente); // Log del nome ricevuto
 
-
-
-            if(clientNames.isEmpty()){
+            if (clientNames.isEmpty()) {
                 nomeGruppo = nomeMittente + "'s group";
-            }
-            else{
+            } else {
                 nomeGruppo = clientNames.get(0);
             }
 
             // Controlla se il client è già registrato
             if (clientNumbers.contains(numeroMittente)) {
-                if (!clientNames.contains(nomeMittente) && clientNumbers.contains(numeroMittente)) {
-                    String strServer = numeroMittente + " is back in " + nomeGruppo + " with a new name, welcome back " +nomeMittente+"!";
-                    System.out.println(strServer);
-                    out.writeUTF(strServer);
-                }
-                else{
-                    String strServer = nomeMittente + " is back in " + nomeGruppo + "!";
-                    System.out.println(strServer);
-                    out.writeUTF(strServer);
-                }
-
-                // Invia i messaggi precedenti a questo client
-                String firstAccessTime = firstAccessTimestamps.get(numeroMittente);
-                for (String msg : messages) {
-                    String[] parts = msg.split(" - ", 2); // Assumendo formato: "timestamp - messaggio"
-                    if (parts.length == 2 && parts[0].compareTo(firstAccessTime) > 0) {
-                        out.writeUTF(parts[1]); // Invia solo i messaggi successivi al primo accesso
-                    }
-                }
+                // Logica per il client che ritorna
+                handleReturningClient(numeroMittente, nomeMittente);
             } else {
-                // Registra il primo accesso con data e ora
-                String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-                firstAccessTimestamps.put(numeroMittente, timestamp);
-
-                // Messaggio di benvenuto
-                out.writeUTF("Welcome " + numeroMittente + "-> "+ nomeMittente + " in " + nomeGruppo + "'s group! First access in "+nomeGruppo+" registered at: " + timestamp);
-                System.out.println(nomeMittente + " joined the chat at " + timestamp);
-
-                // Aggiungi numero e nome ai rispettivi array
-                clientNumbers.add(numeroMittente);
-                clientNames.add(nomeMittente);
+                // Logica per il primo accesso del client
+                handleNewClient(numeroMittente, nomeMittente);
             }
 
             // Leggi i messaggi dal client
-            String str;
             while (true) {
-                str = in.readUTF(); // Leggi il messaggio dal client
-                System.out.println(nomeMittente + ": " + str); // Log del messaggio ricevuto
-                if (str == null || str.trim().isEmpty()) {
-                    continue; // Evita di inviare messaggi vuoti
-                }
+                try {
+                    String str = in.readUTF(); // Leggi il messaggio dal client
+                    System.out.println(nomeMittente + ": " + str); // Log del messaggio ricevuto
 
-                // Aggiungi il messaggio alla lista dei messaggi con timestamp
-                String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-                messages.add(timestamp + " - " + nomeMittente + ": " + str);
+                    if (str == null || str.trim().isEmpty()) {
+                        continue; // Evita di inviare messaggi vuoti
+                    }
 
-                // Invia il messaggio a tutti gli altri client
-                synchronized (threads) {
-                    for (ServerThread thread : threads) {
-                        if (thread != this) { // Evita di inviare il messaggio al client che lo ha inviato
-                            thread.sendMessage(nomeMittente + ": " + str);
+                    // Aggiungi il messaggio alla lista dei messaggi con timestamp
+                    String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+                    messages.add(timestamp + " - " + nomeMittente + ": " + str);
+
+                    // Invia il messaggio a tutti gli altri client
+                    synchronized (threads) {
+                        for (ServerThread thread : threads) {
+                            if (thread != this) { // Evita di inviare il messaggio al client che lo ha inviato
+                                thread.sendMessage(nomeMittente + ": " + str);
+                            }
                         }
                     }
+                } catch (Exception e) {
+                    // Gestione dell'errore durante la lettura di un messaggio
+                    System.out.println(nomeMittente + " quit.");
+                    break; // Esci dal ciclo quando il client si disconnette
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            try {
-                if (in != null) in.close();
-                if (out != null) out.close();
-                if (client != null) client.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            closeQuietly(in);
+            closeQuietly(out);
+            closeQuietly(client);
             synchronized (threads) {
                 threads.remove(this); // Rimuovi il thread dalla lista quando si disconnette
+            }
+        }
+    }
+
+    private void closeQuietly(AutoCloseable resource) {
+        if (resource != null) {
+            try {
+                resource.close();
+            } catch (Exception e) {
+                // Log a livello debug o ignora l'eccezione
+                System.err.println("Error during closure: " + e.getMessage());
             }
         }
     }
@@ -137,5 +122,41 @@ public class ServerThread extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    // Metodo per gestire la logica del client che ritorna
+    private void handleReturningClient(String numeroMittente, String nomeMittente) throws IOException {
+        if (!clientNames.contains(nomeMittente) && clientNumbers.contains(numeroMittente)) {
+            String strServer = numeroMittente + " is back in " + nomeGruppo + " with a new name, welcome back " + nomeMittente + "!";
+            System.out.println(strServer);
+            out.writeUTF(strServer);
+        } else {
+            String strServer = numeroMittente + ": " + nomeMittente + " is back in " + nomeGruppo + "'group!";
+            System.out.println(strServer);
+            out.writeUTF(strServer);
+        }
+
+        // Invia i messaggi precedenti a questo client
+        String firstAccessTime = firstAccessTimestamps.get(numeroMittente);
+        for (String msg : messages) {
+            String[] parts = msg.split(" - ", 2); // Assumendo formato: "timestamp - messaggio"
+            if (parts.length == 2 && parts[0].compareTo(firstAccessTime) > 0) {
+                out.writeUTF(parts[1]); // Invia solo i messaggi successivi al primo accesso
+            }
+        }
+    }
+
+    // Metodo per gestire la logica del primo accesso del client
+    private void handleNewClient(String numeroMittente, String nomeMittente) throws IOException {
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        firstAccessTimestamps.put(numeroMittente, timestamp);
+
+        // Messaggio di benvenuto
+        out.writeUTF("Welcome " + numeroMittente + " -> " + nomeMittente + " in " + nomeGruppo + "'s group! First access in " + nomeGruppo + " registered at: " + timestamp);
+        System.out.println(numeroMittente + ": " + nomeMittente + " joined the chat at " + timestamp);
+
+        // Aggiungi numero e nome ai rispettivi array
+        clientNumbers.add(numeroMittente);
+        clientNames.add(nomeMittente);
     }
 }

@@ -4,8 +4,8 @@ import java.net.Socket;
 import java.util.Scanner;
 
 public class Client {
-    private static final String SERVER_ADDRESS = "localhost"; // Indirizzo del server (assumendo che sia in locale)
-    private static final int SERVER_PORT = 5678; // Porta del server
+    private static final String SERVER_ADDRESS = "localhost"; // Indirizzo del server
+    private static final int SERVER_PORT = 1234; // Porta del server
 
     public static void main(String[] args) {
         try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
@@ -13,12 +13,13 @@ public class Client {
              DataInputStream in = new DataInputStream(socket.getInputStream());
              Scanner scanner = new Scanner(System.in)) {
 
+
             // Invia il nome del client
-            System.out.print("Inserisci il tuo numero di telefono: ");
+            System.out.print("Insert your phone number: ");
             String numero = scanner.nextLine();
             out.writeUTF(numero);
 
-            System.out.print("Inserisci il tuo nome: ");
+            System.out.print("Insert your username: ");
             String nome = scanner.nextLine();
             out.writeUTF(nome);
 
@@ -28,33 +29,34 @@ public class Client {
             // Thread per ricevere messaggi dal server
             Thread receiveThread = new Thread(() -> {
                 try {
-                    while (true) {
-                        // Leggi e stampa i messaggi ricevuti dal server
+                    while (!socket.isClosed()) {
                         String serverMessage = in.readUTF();
                         System.out.println(serverMessage);
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    if (!socket.isClosed()) {
+                        System.out.println("Server connection lost.");
+                    }
                 }
             });
             receiveThread.start();
 
             // Ciclo per inviare messaggi al server
-            System.out.print("Inserisci il messaggio (o 'exit' per uscire): \n");
+            System.out.println("Insert a message (or 'exit' to quit):");
             while (true) {
                 String message = scanner.nextLine();
 
-                if ("exit".equalsIgnoreCase(message)) {
+                if ("exit".equals(message)) {
+                    System.out.println("Goodbye!");
                     break;  // Uscita dal client
                 }
 
-                // Invia il messaggio al server
-                out.writeUTF(message);
+                out.writeUTF(message); // Invia il messaggio al server
             }
-            socket.close();
 
+            socket.close(); // Chiudi il socket
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Error: " + e.getMessage());
         }
     }
 }

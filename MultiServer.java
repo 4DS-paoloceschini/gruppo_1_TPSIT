@@ -6,7 +6,7 @@ public class MultiServer {
     public void attendi() {
         ServerSocket server;
         try {
-            server = new ServerSocket(5678);
+            server = new ServerSocket(1234);
             while (true) {
                 try {
                     Socket client = server.accept();
