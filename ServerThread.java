@@ -127,7 +127,24 @@ public class ServerThread extends Thread {
     // Metodo per gestire la logica del client che ritorna
     private void handleReturningClient(String numeroMittente, String nomeMittente) throws IOException {
         if (!clientNames.contains(nomeMittente) && clientNumbers.contains(numeroMittente)) {
-            String strServer = numeroMittente + " is back in " + nomeGruppo + " with a new name, welcome back " + nomeMittente + "!";
+            boolean ver = false;
+            int i = 0;
+            while(!ver){
+                if(numeroMittente.equals(clientNumbers.get(i))){
+                    ver = true;
+                }else{
+                    i++;
+                }
+            }
+            clientNumbers.set(i, nomeMittente);
+            if (i==0){
+                nomeGruppo = nomeMittente;
+                System.out.println("New name for the group!!!: "+nomeGruppo+"'s group!!!");
+            }
+
+
+            String strServer = numeroMittente + " is back in " + nomeGruppo + "'s group with a new name, welcome back " + nomeMittente + "!";
+
             System.out.println(strServer);
             out.writeUTF(strServer);
         } else {

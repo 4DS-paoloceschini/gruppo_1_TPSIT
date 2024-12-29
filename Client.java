@@ -8,19 +8,50 @@ public class Client {
     private static final int SERVER_PORT = 1234; // Porta del server
 
     public static void main(String[] args) {
-        try (Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
-             DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-             DataInputStream in = new DataInputStream(socket.getInputStream());
-             Scanner scanner = new Scanner(System.in)) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.print("Insert your phone number: ");
+        String numero = scanner.nextLine();
+
+        System.out.print("Insert your username: ");
+        String nome = scanner.nextLine();
+
+        System.out.println("Write '/join' to access the group, until that message, be free to write whatever you want <3");
+
+        String instruction = "";
+
+        while (!instruction.equals("/join")) {
+            instruction = scanner.nextLine();
+        }
+        connection(numero, nome);
+
+
+        do {
+            System.out.println("Want to let your device waiting to rejoin or shut it down? ('/wait' or '/shut')");
+            while (!instruction.equals("/wait") && !instruction.equals("/shut")) {
+                instruction = scanner.nextLine();
+            }
+            if (instruction.equals("/wait")) {
+                while (!instruction.equals("/join")) {
+                    instruction = scanner.nextLine();
+                }
+                connection(numero, nome);}
+            }while (!instruction.equals("/shut")) ;
+
+        System.out.println("Thanks for using our product! <3");
+    }
+
+    public static void connection(String numero, String nome) {
+        Scanner scanner = new Scanner(System.in);
+        try (
+                Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
+                DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+                DataInputStream in = new DataInputStream(socket.getInputStream());) {
 
 
             // Invia il nome del client
-            System.out.print("Insert your phone number: ");
-            String numero = scanner.nextLine();
             out.writeUTF(numero);
 
-            System.out.print("Insert your username: ");
-            String nome = scanner.nextLine();
             out.writeUTF(nome);
 
             // Riceve il messaggio di benvenuto dal server
@@ -42,21 +73,23 @@ public class Client {
             receiveThread.start();
 
             // Ciclo per inviare messaggi al server
-            System.out.println("Insert a message (or 'exit' to quit):");
+            System.out.println("Insert a message (or '/exit' to quit):");
             while (true) {
                 String message = scanner.nextLine();
 
-                if ("exit".equals(message)) {
+                if ("/exit".equals(message)) {
                     System.out.println("Goodbye!");
                     break;  // Uscita dal client
                 }
 
-                out.writeUTF(message); // Invia il messaggio al server
+                if(!(message.charAt(0) == '/')) {
+                    out.writeUTF(message); // Invia il messaggio al server
+                }
             }
 
             socket.close(); // Chiudi il socket
         } catch (Exception e) {
-            System.out.println("Error: " + e.getMessage());
+            System.out.println("<3 Error: " + e.getMessage());
         }
     }
 }
