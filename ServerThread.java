@@ -1,3 +1,7 @@
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -7,6 +11,12 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+class PhoneNumberMismatchException extends Exception {
+    public PhoneNumberMismatchException(String message) {
+        super(message);
+    }
+}
 
 public class ServerThread extends Thread {
     private static final List<ServerThread> threads = new CopyOnWriteArrayList<>();
@@ -50,9 +60,13 @@ public class ServerThread extends Thread {
             String nomeMittente = in.readUTF();
             System.out.println("Received name: " + nomeMittente); // Log del nome ricevuto
 
+
             if (clientNames.isEmpty()) {
                 nomeGruppo = nomeMittente + "'s group";
             } else {
+                if(!getCountryFromPhoneNumber(clientNumbers.get(0), numeroMittente)){
+                    throw new PhoneNumberMismatchException("Un numero sospetto ha provato ad accedere");
+                }
                 nomeGruppo = clientNames.get(0);
             }
 
@@ -87,13 +101,18 @@ public class ServerThread extends Thread {
                             }
                         }
                     }
-                } catch (Exception e) {
+                }
+                catch (Exception e) {
                     // Gestione dell'errore durante la lettura di un messaggio
                     System.out.println(nomeMittente + " quit.");
                     break; // Esci dal ciclo quando il client si disconnette
                 }
             }
-        } catch (Exception e) {
+        }catch (PhoneNumberMismatchException e) {
+            // Gestisce l'eccezione e stampa il messaggio
+            System.out.println(e.getMessage());
+        }
+        catch (Exception e) {
             e.printStackTrace();
         } finally {
             closeQuietly(in);
@@ -163,7 +182,7 @@ public class ServerThread extends Thread {
         }
     }
 
-    // Metodo per gestire la logica del primo accesso del client
+    //Gestione della logica del primo accesso del client
     private void handleNewClient(String numeroMittente, String nomeMittente) throws IOException {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         firstAccessTimestamps.put(numeroMittente, timestamp);
@@ -175,5 +194,27 @@ public class ServerThread extends Thread {
         // Aggiungi numero e nome ai rispettivi array
         clientNumbers.add(numeroMittente);
         clientNames.add(nomeMittente);
+    }
+
+    public static boolean getCountryFromPhoneNumber(String adminPhoneNumber, String phoneNumber) {
+        PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
+        try {
+            // Analizza il numero specificando la regione
+            Phonenumber.PhoneNumber parsedNumberUser = phoneNumberUtil.parse(phoneNumber, "IT");
+            Phonenumber.PhoneNumber parsedNumberAdmin = phoneNumberUtil.parse(adminPhoneNumber, "IT");
+
+            // Verifica se il numero è valido per lo stato corrente
+            if (phoneNumberUtil.isValidNumber(parsedNumberAdmin) && phoneNumberUtil.isValidNumber(parsedNumberUser)) {
+                // Ricava il codice della regione (stato) dal numero
+                String regionUser = phoneNumberUtil.getRegionCodeForNumber(parsedNumberUser);
+                String regionAdmin = phoneNumberUtil.getRegionCodeForNumber(parsedNumberAdmin);
+                if (!regionUser.equals(regionAdmin)) {
+                    return false;
+                }
+            }
+        } catch (NumberParseException ignored) {
+
+        }
+        return true;
     }
 }

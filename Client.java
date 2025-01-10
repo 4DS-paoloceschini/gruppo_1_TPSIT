@@ -1,3 +1,7 @@
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber;
+import com.google.i18n.phonenumbers.NumberParseException;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
@@ -10,8 +14,18 @@ public class Client {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        System.out.print("Insert your phone number: ");
-        String numero = scanner.nextLine();
+        String numero;
+
+        while (true) {
+            System.out.print("Insert your phone number (must put the prefix): ");
+            numero = scanner.nextLine();
+
+            if (numero.charAt(0)=='+' && isValidPhoneNumber(numero)) {
+                break;
+            } else {
+                System.out.println("Invalid phone number. Please try again.");
+            }
+        }
 
         System.out.print("Insert your username: ");
         String nome = scanner.nextLine();
@@ -92,4 +106,24 @@ public class Client {
             System.out.println("<3 Error: " + e.getMessage());
         }
     }
+
+    public static boolean isValidPhoneNumber(String phoneNumber) {
+        PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
+        try {
+            // Analizza il numero specificando la regione
+            Phonenumber.PhoneNumber parsedNumber = phoneNumberUtil.parse(phoneNumber, "IT");
+
+            // Verifica se il numero è valido per lo stato corrente
+            if (phoneNumberUtil.isValidNumber(parsedNumber)) {
+                // Ricava il codice della regione (stato) dal numero
+                String region = phoneNumberUtil.getRegionCodeForNumber(parsedNumber);
+                System.out.println("Valid phone number from country: " + region);
+                return true;
+            }
+        } catch (NumberParseException ignored) {
+
+        }
+        return false;
+    }
+
 }
