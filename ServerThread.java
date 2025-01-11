@@ -28,7 +28,7 @@ public class ServerThread extends Thread {
     private Socket client;
     private DataOutputStream out;
     private DataInputStream in;
-    private String nomeGruppo = "Unnamed group";
+    private String groupName = "Unnamed group";
 
     public ServerThread(Socket c) {
         client = c;
@@ -53,37 +53,37 @@ public class ServerThread extends Thread {
     public void comunica() {
         try {
             // Leggi il numero del client
-            String numeroMittente = in.readUTF();
-            System.out.println("Received number: " + numeroMittente); // Log del numero ricevuto
+            String sendernNumber = in.readUTF();
+            System.out.println("Received number: " + sendernNumber); // Log del numero ricevuto
 
             // Leggi il nome del client
-            String nomeMittente = in.readUTF();
-            System.out.println("Received name: " + nomeMittente); // Log del nome ricevuto
+            String senderName = in.readUTF();
+            System.out.println("Received name: " + senderName); // Log del nome ricevuto
 
 
             if (clientNames.isEmpty()) {
-                nomeGruppo = nomeMittente + "'s group";
+                groupName = senderName + "'s group";
             } else {
-                if(!getCountryFromPhoneNumber(clientNumbers.get(0), numeroMittente)){
-                    throw new PhoneNumberMismatchException("Un numero sospetto ha provato ad accedere");
+                if(!getCountryFromPhoneNumber(clientNumbers.get(0), sendernNumber)){
+                    throw new PhoneNumberMismatchException("A suspicious number tried to access \uD83D\uDE31");
                 }
-                nomeGruppo = clientNames.get(0);
+                groupName = clientNames.get(0);
             }
 
             // Controlla se il client è già registrato
-            if (clientNumbers.contains(numeroMittente)) {
+            if (clientNumbers.contains(sendernNumber)) {
                 // Logica per il client che ritorna
-                handleReturningClient(numeroMittente, nomeMittente);
+                handleReturningClient(sendernNumber, senderName);
             } else {
                 // Logica per il primo accesso del client
-                handleNewClient(numeroMittente, nomeMittente);
+                handleNewClient(sendernNumber, senderName);
             }
 
             // Leggi i messaggi dal client
             while (true) {
                 try {
                     String str = in.readUTF(); // Leggi il messaggio dal client
-                    System.out.println(nomeMittente + ": " + str); // Log del messaggio ricevuto
+                    System.out.println(senderName + ": " + str); // Log del messaggio ricevuto
 
                     if (str == null || str.trim().isEmpty()) {
                         continue; // Evita di inviare messaggi vuoti
@@ -91,20 +91,20 @@ public class ServerThread extends Thread {
 
                     // Aggiungi il messaggio alla lista dei messaggi con timestamp
                     String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-                    messages.add(timestamp + " - " + nomeMittente + ": " + str);
+                    messages.add(timestamp + " - " + senderName + ": " + str);
 
                     // Invia il messaggio a tutti gli altri client
                     synchronized (threads) {
                         for (ServerThread thread : threads) {
                             if (thread != this) { // Evita di inviare il messaggio al client che lo ha inviato
-                                thread.sendMessage(nomeMittente + ": " + str);
+                                thread.sendMessage(senderName + ": " + str);
                             }
                         }
                     }
                 }
                 catch (Exception e) {
                     // Gestione dell'errore durante la lettura di un messaggio
-                    System.out.println(nomeMittente + " quit.");
+                    System.out.println(senderName + " quit.");
                     break; // Esci dal ciclo quando il client si disconnette
                 }
             }
@@ -144,36 +144,36 @@ public class ServerThread extends Thread {
     }
 
     // Metodo per gestire la logica del client che ritorna
-    private void handleReturningClient(String numeroMittente, String nomeMittente) throws IOException {
-        if (!clientNames.contains(nomeMittente) && clientNumbers.contains(numeroMittente)) {
+    private void handleReturningClient(String sendernNumber, String senderName) throws IOException {
+        if (!clientNames.contains(senderName) && clientNumbers.contains(sendernNumber)) {
             boolean ver = false;
             int i = 0;
             while(!ver){
-                if(numeroMittente.equals(clientNumbers.get(i))){
+                if(sendernNumber.equals(clientNumbers.get(i))){
                     ver = true;
                 }else{
                     i++;
                 }
             }
-            clientNumbers.set(i, nomeMittente);
+            clientNumbers.set(i, senderName);
             if (i==0){
-                nomeGruppo = nomeMittente;
-                System.out.println("New name for the group!!!: "+nomeGruppo+"'s group!!!");
+                groupName = senderName;
+                System.out.println("New name for the group!!!: "+ groupName +"'s group!!!");
             }
 
 
-            String strServer = numeroMittente + " is back in " + nomeGruppo + "'s group with a new name, welcome back " + nomeMittente + "!";
+            String strServer = sendernNumber + " is back in " + groupName + "'s group with a new name, welcome back " + senderName + "!";
 
             System.out.println(strServer);
             out.writeUTF(strServer);
         } else {
-            String strServer = numeroMittente + ": " + nomeMittente + " is back in " + nomeGruppo + "'group!";
+            String strServer = sendernNumber + ": " + senderName + " is back in " + groupName + "'group!";
             System.out.println(strServer);
             out.writeUTF(strServer);
         }
 
         // Invia i messaggi precedenti a questo client
-        String firstAccessTime = firstAccessTimestamps.get(numeroMittente);
+        String firstAccessTime = firstAccessTimestamps.get(sendernNumber);
         for (String msg : messages) {
             String[] parts = msg.split(" - ", 2); // Assumendo formato: "timestamp - messaggio"
             if (parts.length == 2 && parts[0].compareTo(firstAccessTime) > 0) {
@@ -183,17 +183,17 @@ public class ServerThread extends Thread {
     }
 
     //Gestione della logica del primo accesso del client
-    private void handleNewClient(String numeroMittente, String nomeMittente) throws IOException {
+    private void handleNewClient(String senderNumber, String senderName) throws IOException {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-        firstAccessTimestamps.put(numeroMittente, timestamp);
+        firstAccessTimestamps.put(senderNumber, timestamp);
 
         // Messaggio di benvenuto
-        out.writeUTF("Welcome " + numeroMittente + " -> " + nomeMittente + " in " + nomeGruppo + "'s group! First access in " + nomeGruppo + " registered at: " + timestamp);
-        System.out.println(numeroMittente + ": " + nomeMittente + " joined the chat at " + timestamp);
+        out.writeUTF("Welcome " + senderNumber + " -> " + senderName + " in " + groupName + "'s group! First access in " + groupName + " registered at: " + timestamp);
+        System.out.println(senderNumber + ": " + senderName + " joined the chat at " + timestamp);
 
         // Aggiungi numero e nome ai rispettivi array
-        clientNumbers.add(numeroMittente);
-        clientNames.add(nomeMittente);
+        clientNumbers.add(senderNumber);
+        clientNames.add(senderName);
     }
 
     public static boolean getCountryFromPhoneNumber(String adminPhoneNumber, String phoneNumber) {

@@ -14,13 +14,13 @@ public class Client {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
-        String numero;
+        String number;
 
         while (true) {
             System.out.print("Insert your phone number (must put the prefix): ");
-            numero = scanner.nextLine();
+            number = scanner.nextLine();
 
-            if (numero.charAt(0)=='+' && isValidPhoneNumber(numero)) {
+            if (number.charAt(0)=='+' && isValidPhoneNumber(number)) {
                 break;
             } else {
                 System.out.println("Invalid phone number. Please try again.");
@@ -28,7 +28,7 @@ public class Client {
         }
 
         System.out.print("Insert your username: ");
-        String nome = scanner.nextLine();
+        String name = scanner.nextLine();
 
         System.out.println("Write '/join' to access the group, until that message, be free to write whatever you want <3");
 
@@ -37,7 +37,7 @@ public class Client {
         while (!instruction.equals("/join")) {
             instruction = scanner.nextLine();
         }
-        connection(numero, nome);
+        connection(number, name);
 
 
         do {
@@ -49,13 +49,13 @@ public class Client {
                 while (!instruction.equals("/join")) {
                     instruction = scanner.nextLine();
                 }
-                connection(numero, nome);}
+                connection(number, name);}
             }while (!instruction.equals("/shut")) ;
 
         System.out.println("Thanks for using our product! <3");
     }
 
-    public static void connection(String numero, String nome) {
+    public static void connection(String number, String name) {
         Scanner scanner = new Scanner(System.in);
         try (
                 Socket socket = new Socket(SERVER_ADDRESS, SERVER_PORT);
@@ -64,9 +64,9 @@ public class Client {
 
 
             // Invia il nome del client
-            out.writeUTF(numero);
+            out.writeUTF(number);
 
-            out.writeUTF(nome);
+            out.writeUTF(name);
 
             // Riceve il messaggio di benvenuto dal server
             System.out.println(in.readUTF());
