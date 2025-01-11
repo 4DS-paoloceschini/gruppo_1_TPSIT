@@ -117,7 +117,7 @@ public class Client {
             if (phoneNumberUtil.isValidNumber(parsedNumber)) {
                 // Ricava il codice della regione (stato) dal numero
                 String region = phoneNumberUtil.getRegionCodeForNumber(parsedNumber);
-                System.out.println("Valid phone number from country: " + region);
+                //System.out.println("Valid phone number from country: " + region);
                 return true;
             }
         } catch (NumberParseException ignored) {
