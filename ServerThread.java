@@ -83,23 +83,25 @@ public class ServerThread extends Thread {
             while (true) {
                 try {
                     String str = in.readUTF(); // Leggi il messaggio dal client
-                    System.out.println(senderName + ": " + str); // Log del messaggio ricevuto
 
-                    if (str == null || str.trim().isEmpty()) {
-                        continue; // Evita di inviare messaggi vuoti
+                    if(str.equals("/exit")){
+                        messageSender(senderName, "quit.");
                     }
+                    else {
 
-                    // Aggiungi il messaggio alla lista dei messaggi con timestamp
-                    String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
-                    messages.add(timestamp + " - " + senderName + ": " + str);
+                        System.out.println(senderName + ": " + str); // Log del messaggio ricevuto
 
-                    // Invia il messaggio a tutti gli altri client
-                    synchronized (threads) {
-                        for (ServerThread thread : threads) {
-                            if (thread != this) { // Evita di inviare il messaggio al client che lo ha inviato
-                                thread.sendMessage(senderName + ": " + str);
-                            }
+                        if (str == null || str.trim().isEmpty()) {
+                            continue; // Evita di inviare messaggi vuoti
                         }
+
+
+                        // Aggiungi il messaggio alla lista dei messaggi con timestamp
+                        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+                        messages.add(timestamp + " - " + senderName + ": " + str);
+
+                        // Invia il messaggio a tutti gli altri client
+                        messageSender(senderName, str);
                     }
                 }
                 catch (Exception e) {
@@ -135,6 +137,16 @@ public class ServerThread extends Thread {
         }
     }
 
+    private void messageSender(String senderName, String message){
+        synchronized (threads) {
+            for (ServerThread thread : threads) {
+                if (thread != this) { // Evita di inviare il messaggio al client che lo ha inviato
+                    thread.sendMessage(senderName + " " + message);
+                }
+            }
+        }
+    }
+
     private void sendMessage(String message) {
         try {
             out.writeUTF(message);
@@ -164,6 +176,8 @@ public class ServerThread extends Thread {
 
             String strServer = sendernNumber + " is back in " + groupName + "'s group with a new name, welcome back " + senderName + "!";
 
+            messageSender(senderName, "joined the chat!");
+
             System.out.println(strServer);
             out.writeUTF(strServer);
         } else {
@@ -190,6 +204,8 @@ public class ServerThread extends Thread {
         // Messaggio di benvenuto
         out.writeUTF("Welcome " + senderNumber + " -> " + senderName + " in " + groupName + "'s group! First access in " + groupName + " registered at: " + timestamp);
         System.out.println(senderNumber + ": " + senderName + " joined the chat at " + timestamp);
+
+        messageSender(senderName, "joined the chat!");
 
         // Aggiungi numero e nome ai rispettivi array
         clientNumbers.add(senderNumber);

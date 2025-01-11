@@ -43,6 +43,7 @@ public class Client {
         do {
             System.out.println("Want to let your device waiting to rejoin or shut it down? ('/wait' or '/shut')");
             while (!instruction.equals("/wait") && !instruction.equals("/shut")) {
+                System.out.println("Write /join to rejoin the chat");
                 instruction = scanner.nextLine();
             }
             if (instruction.equals("/wait")) {
@@ -92,6 +93,7 @@ public class Client {
                 String message = scanner.nextLine();
 
                 if ("/exit".equals(message)) {
+                    out.writeUTF(message);
                     System.out.println("Goodbye!");
                     break;  // Uscita dal client
                 }
