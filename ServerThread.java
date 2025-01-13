@@ -79,7 +79,6 @@ public class ServerThread extends Thread {
                 handleNewClient(sendernNumber, senderName);
             }
 
-            // Leggi i messaggi dal client
             while (true) {
                 try {
                     String str = in.readUTF(); // Leggi il messaggio dal client
@@ -131,7 +130,6 @@ public class ServerThread extends Thread {
             try {
                 resource.close();
             } catch (Exception e) {
-                // Log a livello debug o ignora l'eccezione
                 System.err.println("Error during closure: " + e.getMessage());
             }
         }
@@ -140,7 +138,7 @@ public class ServerThread extends Thread {
     private void messageSender(String senderName, String message){
         synchronized (threads) {
             for (ServerThread thread : threads) {
-                if (thread != this) { // Evita di inviare il messaggio al client che lo ha inviato
+                if (thread != this) {
                     thread.sendMessage(senderName + " " + message);
                 }
             }
@@ -189,7 +187,7 @@ public class ServerThread extends Thread {
         // Invia i messaggi precedenti a questo client
         String firstAccessTime = firstAccessTimestamps.get(sendernNumber);
         for (String msg : messages) {
-            String[] parts = msg.split(" - ", 2); // Assumendo formato: "timestamp - messaggio"
+            String[] parts = msg.split(" - ", 2);
             if (parts.length == 2 && parts[0].compareTo(firstAccessTime) > 0) {
                 out.writeUTF(parts[1]); // Invia solo i messaggi successivi al primo accesso
             }
@@ -207,7 +205,7 @@ public class ServerThread extends Thread {
 
         messageSender(senderName, "joined the chat!");
 
-        // Aggiungi numero e nome ai rispettivi array
+        // Aggiungi numero e nome
         clientNumbers.add(senderNumber);
         clientNames.add(senderName);
     }
@@ -219,9 +217,9 @@ public class ServerThread extends Thread {
             Phonenumber.PhoneNumber parsedNumberUser = phoneNumberUtil.parse(phoneNumber, "IT");
             Phonenumber.PhoneNumber parsedNumberAdmin = phoneNumberUtil.parse(adminPhoneNumber, "IT");
 
-            // Verifica se il numero è valido per lo stato corrente
+            // Verifica se il numero è valido
             if (phoneNumberUtil.isValidNumber(parsedNumberAdmin) && phoneNumberUtil.isValidNumber(parsedNumberUser)) {
-                // Ricava il codice della regione (stato) dal numero
+                // Ricava il codice della regione dal numero
                 String regionUser = phoneNumberUtil.getRegionCodeForNumber(parsedNumberUser);
                 String regionAdmin = phoneNumberUtil.getRegionCodeForNumber(parsedNumberAdmin);
                 if (!regionUser.equals(regionAdmin)) {
